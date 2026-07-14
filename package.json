@@ -1,0 +1,25 @@
+{
+  "name": "gsc-index-monitor",
+  "version": "1.0.0",
+  "description": "Local Google Search Console index monitor + dashboard — check live index status, view logs, and request reindexing without the 30-day UI delay.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Connascent-Dev/gsc-api.git"
+  },
+  "scripts": {
+    "login": "node src/login.mjs",
+    "check": "node src/check-index.mjs",
+    "check:all": "node src/check-index.mjs --all",
+    "dashboard": "node src/server.mjs",
+    "start": "node src/server.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "googleapis": "^144.0.0"
+  }
+}

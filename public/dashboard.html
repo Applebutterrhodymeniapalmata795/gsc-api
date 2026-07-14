@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GSC Index Monitor · Connascent</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ccircle%20cx='11.5'%20cy='11.5'%20r='7.3'%20fill='%239cca8c'/%3E%3Ccircle%20cx='20.5'%20cy='12.5'%20r='7.3'%20fill='%23fcc044'/%3E%3Ccircle%20cx='20.8'%20cy='21'%20r='7.3'%20fill='%23f7b262'/%3E%3Ccircle%20cx='11.5'%20cy='20.8'%20r='7.3'%20fill='%23599bcd'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='3.4'%20fill='%23f06a28'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    /* --- Connascent brand palette (from connascent.com globals.css) --- */
+    --c-green-dark:#4a9854; --c-green:#9cca8c; --c-green-light:#c0dbad;
+    --c-orange:#f89e1d;     --c-yellow:#fcc044; --c-yellow-light:#fbd374;
+    --c-coral:#f06a28;      --c-peach:#f7b262;  --c-peach-light:#f8c887;
+    --c-blue-dark:#225ea0;  --c-blue:#599bcd;   --c-blue-light:#82b5db;
+
+    /* --- dark UI theme, Connascent-tuned --- */
+    --bg:#0d1117; --panel:#161c25; --panel-2:#1c2330; --line:#262e3a;
+    --txt:#e9eef4; --muted:#8b95a3; --chip:#1f2732;
+    --green:#4a9854; --red:#f2685a; --amber:#f89e1d; --blue:#82b5db;
+
+    /* --- brand accents used across the UI --- */
+    --brand:#f89e1d; --brand-2:#fcc044; --brand-strong:#f06a28; --accent:#82b5db;
+    --brand-soft:rgba(248,158,29,.14); --brand-line:rgba(248,158,29,.45);
+    --radius:9px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--txt);
+    font: 14px/1.55 -apple-system, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body::before { content:""; position:fixed; inset:0 0 auto 0; height:3px; z-index:50;
+    background: linear-gradient(90deg, var(--c-green-dark), var(--c-yellow), var(--c-coral), var(--c-blue)); }
+  ::selection { background: var(--brand-soft); }
+  ::-webkit-scrollbar { width:11px; height:11px; }
+  ::-webkit-scrollbar-thumb { background:#2c3542; border:3px solid var(--bg); border-radius:8px; }
+  ::-webkit-scrollbar-thumb:hover { background:#3a4655; }
+  a { color: var(--accent); }
+
+  /* --- header / topbar --- */
+  header { padding: 15px 24px; border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel)); }
+  .brand { display:flex; align-items:center; gap:14px; min-width:0; }
+  .logo { width:40px; height:40px; flex:none; display:grid; place-items:center; }
+  .logo svg { width:40px; height:40px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+  .brandtext { min-width:0; }
+  .eyebrow { font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; font-weight:700;
+    background: linear-gradient(90deg, var(--brand-2), var(--brand-strong));
+    -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:2px; }
+  h1 { font-size: 18px; margin: 0; font-weight: 600; letter-spacing:-.01em;
+    display: flex; align-items: center; gap: 9px; }
+  .meta { color: var(--muted); font-size: 12.5px; margin-top:3px; }
+  .meta code { color: var(--txt); background: var(--chip); padding: 1.5px 6px; border-radius: 5px;
+    font-size:11.5px; border:1px solid var(--line); }
+  .hactions { display:flex; gap:9px; flex-wrap:wrap; }
+
+  .warn { background: linear-gradient(180deg, #2a1c07, #241804); border: 1px solid var(--brand-line);
+    color: #f4cd86; padding: 12px 16px; border-radius: 10px; margin: 16px 24px; font-size: 13px; }
+  .warn code { color: #fff; background:rgba(0,0,0,.28); padding:1px 6px; border-radius:5px; }
+
+  /* --- tabs --- */
+  .tabs { display: flex; gap: 2px; padding: 0 24px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .tab { padding: 12px 15px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent;
+    font-size: 13.5px; font-weight:500; display: flex; align-items: center; gap: 7px; user-select: none;
+    transition: color .15s, border-color .15s; }
+  .tab:hover { color: var(--txt); }
+  .tab.active { color: var(--txt); border-bottom-color: var(--brand); }
+  .tab .dot { background: var(--red); color: #fff; font-size: 11px; min-width: 18px; height: 18px;
+    border-radius: 9px; display: none; align-items: center; justify-content: center; padding: 0 5px; font-weight:600; }
+  .tab .dot.show { display: inline-flex; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* --- shared controls --- */
+  .bar { display: flex; gap: 10px; align-items: center; padding: 13px 24px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line); position: sticky; top: 0; background: rgba(13,17,23,.9);
+    backdrop-filter: blur(8px); z-index: 5; }
+  .pill { padding: 4px 11px; border-radius: 999px; font-size: 12px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel); color: var(--muted); user-select: none;
+    text-transform: capitalize; transition: color .15s, border-color .15s, background .15s; }
+  .pill:hover { color: var(--txt); border-color:#3a4453; }
+  .pill.active { color: var(--txt); border-color: var(--brand-line); background: var(--brand-soft); }
+  .pill b { color: var(--brand-2); }
+  input[type=search] { flex: 1; min-width: 160px; background: var(--panel); border: 1px solid var(--line);
+    color: var(--txt); padding: 8px 12px; border-radius: var(--radius); outline: none;
+    transition: border-color .15s, box-shadow .15s; }
+  input[type=search]:focus, input[type=text]:focus { border-color: var(--brand); box-shadow:0 0 0 3px var(--brand-soft); }
+  button { background: var(--panel); color: var(--txt); border: 1px solid var(--line);
+    padding: 8px 13px; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight:500;
+    transition: border-color .15s, background .15s, transform .05s; }
+  button:hover { border-color: var(--brand); background: var(--panel-2); }
+  button:active { transform: translateY(1px); }
+  button.primary { background: linear-gradient(180deg, var(--brand-2), var(--brand)); border-color: var(--brand);
+    color:#231603; font-weight:600;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 2px 8px rgba(248,158,29,.25); }
+  button.primary:hover { background: linear-gradient(180deg, #ffcf5c, var(--brand)); border-color: var(--brand-2); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  select { background: var(--panel); border:1px solid var(--line); color:var(--txt); padding:7px 9px;
+    border-radius:8px; outline:none; }
+  select:focus { border-color: var(--brand); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em;
+    position: sticky; top: 56px; background: var(--bg); z-index:4; }
+  td.url { max-width: 1px; }
+  td.url a { color: var(--txt); text-decoration: none; word-break: break-all; }
+  td.url a:hover { color: var(--accent); text-decoration: underline; }
+  tbody tr { transition: background .1s; }
+  tr:hover { background: #141b24; }
+  .badge { display: inline-flex; align-items:center; gap:5px; padding: 3px 10px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 600; white-space: nowrap; border:1px solid transparent; }
+  .b-ok { background: rgba(74,152,84,.16); color: #7fd68d; border-color: rgba(74,152,84,.35); }
+  .b-no { background: rgba(242,104,90,.15); color: #ff8a7e; border-color: rgba(242,104,90,.32); }
+  .b-un { background: rgba(139,149,163,.12); color: var(--muted); border-color: rgba(139,149,163,.25); }
+  .cov { color: var(--muted); font-size: 12px; }
+  .acts { display: flex; gap: 6px; white-space: nowrap; }
+  .acts button, .acts a { padding: 5px 10px; font-size: 12px; border-radius: 7px; }
+  .acts a { text-decoration: none; color: var(--muted); border: 1px solid var(--line); background: var(--panel); font-weight:500; }
+  .acts a:hover { border-color: var(--accent); color: var(--txt); }
+
+  /* --- logs table --- */
+  .lvl { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing:.03em; }
+  .lvl-error { color: var(--red); }
+  .lvl-warn { color: var(--amber); }
+  .lvl-info { color: var(--accent); }
+  .lvl-debug { color: var(--muted); }
+  .logtime { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .ev { color: var(--muted); font-size: 12px; }
+
+  /* --- console --- */
+  #console { font: 12.5px/1.6 "Cascadia Code", "Consolas", ui-monospace, monospace;
+    background: #090c10; margin: 0; padding: 14px 20px; height: calc(100vh - 170px);
+    overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+  .cline { display: block; }
+  .c-error { color: #ff8a7e; } .c-warn { color: var(--brand-2); }
+  .c-info { color: var(--c-blue-light); } .c-debug { color: #6b7684; }
+  .c-ts { color: #4d5763; }
+  .c-tag { color: #8b95a3; }
+  #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    background: var(--panel-2); border: 1px solid var(--line); padding: 11px 18px; border-radius: 10px;
+    max-width: 80vw; opacity: 0; transition: opacity .2s; pointer-events: none; font-size: 13px; z-index: 60;
+    box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+  #toast.show { opacity: 1; } #toast.err { border-color: var(--red); } #toast.ok { border-color: var(--green); }
+  .spin { animation: s 1s linear infinite; display: inline-block; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  .live { font-size: 11px; color: var(--green); display: inline-flex; align-items: center; gap: 5px; font-weight:600; }
+  .live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+    box-shadow: 0 0 0 0 rgba(74,152,84,.5); animation: pulse 1.8s infinite; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 6px rgba(74,152,84,0); } 100% { box-shadow: 0 0 0 0 rgba(74,152,84,0); } }
+  .live.off { color: var(--muted); } .live.off::before { background: var(--muted); animation:none; box-shadow:none; }
+
+  /* --- cards (site tab) --- */
+  .card { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel);
+    box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .cardhead { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--panel-2), var(--panel)); }
+  .cardhead b { font-weight:600; }
+  .cardhead button, .cardhead select { margin-left: auto; }
+  .cardhead button + select, .cardhead select + select, .cardhead select + button { margin-left: 8px; }
+  .cardbody { padding: 14px 16px; }
+  .kv { display: grid; grid-template-columns: 180px 1fr; gap: 5px 14px; font-size: 13px; }
+  .kv span:nth-child(odd) { color: var(--muted); }
+  .dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .dtable th, .dtable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  .dtable th { color: var(--muted); font-weight: 600; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; }
+  .dtable tr:hover td { background:#141b24; }
+  .dtable td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* --- modal --- */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(4,7,11,.66); backdrop-filter: blur(3px); z-index: 40;
+    align-items: flex-start; justify-content: center; padding: 50px 16px; overflow-y: auto; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: 100%;
+    max-width: 760px; overflow: hidden; box-shadow: 0 24px 70px rgba(0,0,0,.6); }
+  .modal-head { display: flex; justify-content: space-between; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--panel-2), var(--panel)); }
+  .modal-head b { font-weight:600; }
+  .modal-head button { border: none; background: none; color: var(--muted); font-size: 18px; }
+  .modal-head button:hover { color: var(--txt); }
+  .modal-acts { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+  .modal-acts a { text-decoration: none; color: var(--txt); border: 1px solid var(--line); background: var(--bg);
+    padding: 7px 13px; border-radius: 8px; font-size: 13px; }
+  .modal-acts a:hover { border-color: var(--accent); }
+  .modal-body { padding: 16px 18px; }
+  .sec-title { color: var(--brand-2); font-size: 11px; text-transform: uppercase; font-weight:700; margin: 18px 0 8px; letter-spacing: .06em; }
+  .sec-title:first-child { margin-top: 0; }
+  .vbadge { font-weight: 600; } .v-PASS { color: #7fd68d; } .v-FAIL, .v-NEUTRAL { color: #ff8a7e; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 668.9 674.48" xmlns="http://www.w3.org/2000/svg">
+        <path d="M431.29,313.82C377.94,335,303.65,335.45,303.65,335.45a256.7,256.7,0,0,1-30-.42c-13.29-4.78-32.49-14.64-37-32.6,0,0-9-35.84,54.16-63.59,0,0,38.63-20.41,78.06-3.7l6.07,3,6.26,13.14C398.67,299.18,431.29,313.82,431.29,313.82Z" transform="translate(-90.75 -4.29)" fill="#4a9854"/>
+        <path d="M375,238.18l-6.07-3c-39.43-16.71-78.06,3.7-78.06,3.7-63.17,27.75-54.16,63.59-54.16,63.59,4.49,18,23.69,27.82,37,32.6C208,330.24,173.1,301.21,173.1,301.21c-55.51-39.62-58.93-98.74-57.68-123.25,35-58.64,83.2-68.23,99.48-71.78,3.66-.79,20-1.45,22.4-1.67,15.81-1.44,67.08,1.45,106.29,67.83Z" transform="translate(-90.75 -4.29)" fill="#9cca8c"/>
+        <path d="M375,238.18l-31.39-65.84C304.38,106,253.11,103.07,237.3,104.51c-2.43.22-18.74.88-22.4,1.67-16.28,3.55-64.52,13.14-99.48,71.78a100.57,100.57,0,0,1,1.12-11.27C137.94,35.22,265.13,60.9,265.13,60.9c96.61,20.79,100.18,115.34,100.18,115.34C369,209.39,375,238.18,375,238.18Z" transform="translate(-90.75 -4.29)" fill="#c0dbad"/>
+        <path d="M572,278a57.75,57.75,0,0,1-14.43,27.18c-74.44,5.68-122.41,63.43-122.41,63.43,7.22-30.32,10.2-48.49,10.2-48.49,1.11-8.84,2.16-17.72,2.82-26.51a199.48,199.48,0,0,0,.44-27c12.59-61.61,37.67-70.85,37.67-70.85,12.76-6,24.07-6.93,33.86-4.87,29.46,6.19,45.18,39.11,45.18,39.11a99.6,99.6,0,0,1,6.47,19.79A66.87,66.87,0,0,1,572,278Z" transform="translate(-90.75 -4.29)" fill="#f89e1d"/>
+        <path d="M747.34,153.49l-.11-.16c-32.29-43.2-80.22-67-140.36-69.9a152.4,152.4,0,0,0-17.67.13C484.84,90.31,454.74,205.14,448.44,263.62c-.09-1.08-.19-2.15-.3-3.22-5.15-47.93-10.43-94.13-10.43-94.13-9.93-89.77,33-149.88,93.9-159.59C641.78-10.89,724.83,71.32,747.34,153.49Z" transform="translate(-90.75 -4.29)" fill="#fbd374"/>
+        <path d="M751.85,184.27c0,17.08-2.75,32.4-7.83,45.84a103.49,103.49,0,0,1-10.9,21.22v0a98.46,98.46,0,0,1-26.48,26.57l-.24.16a127.27,127.27,0,0,1-32,14.66h0a140,140,0,0,1-28.49,5.72l-87.29,6.65-.95.08A57.75,57.75,0,0,0,572,278a66.87,66.87,0,0,0-.2-28.25A99.6,99.6,0,0,0,565.36,230s-15.72-32.92-45.18-39.11c-9.79-2.06-21.1-1.16-33.86,4.87,0,0-25.08,9.24-37.67,70.85-.06-1-.13-2-.21-3,6.3-58.48,36.4-173.31,140.76-180.06a152.4,152.4,0,0,1,17.67-.13c60.14,2.92,108.07,26.7,140.36,69.9.29.93.56,1.86.82,2.8q1,4,1.88,8A105.55,105.55,0,0,1,751.85,184.27Z" transform="translate(-90.75 -4.29)" fill="#fcc044"/>
+        <circle cx="640.16" cy="346.76" r="28.74" fill="#fcc044"/>
+        <circle cx="520.68" cy="343.36" r="10.46" fill="#fbd374"/>
+        <circle cx="101.86" cy="364.4" r="26.67" fill="#599bcd"/>
+        <circle cx="14.34" cy="427.42" r="14.34" fill="#599bcd"/>
+        <path d="M563.37,456.6s-10.79,3.27-33,2.06c-4.17-.23-8.74-.61-13.72-1.21a104,104,0,0,1-27.72-7.28L469,441.87l-.2-.93C451.47,391.71,432.77,383,432.77,383c53.64-15.45,100.33-15.45,100.33-15.45A179.9,179.9,0,0,1,557,369.28c4,.49,7.87,1.06,11.55,1.71a179.71,179.71,0,0,1,30.07,7.8c11.14,6.61,21.52,20.18,22.12,29.2C620.73,408,627.34,442.62,563.37,456.6Z" transform="translate(-90.75 -4.29)" fill="#f06a28"/>
+        <path d="M677.79,504.3c-.79,23.9-8.34,48.22-28.2,61.52-15.6,10.45-29.79,20.48-36.69,22.7-17.12,5.5-38.41-3.53-40.36-3.44-12.69.59-55.88,2.48-81.86-64.66l-6.42-6.65-1.83-8.48-6.85-37.9s-2-8.22-3.67-14.72q-.9-3.5-2.11-7.1l-.78-3.7,19.92,8.3a104,104,0,0,0,27.72,7.28c5,.6,9.55,1,13.72,1.21,22.2,1.21,33-2.06,33-2.06,64-14,57.36-48.61,57.36-48.61-.6-9-11-22.59-22.12-29.2,28.36,10.17,44,28.8,44,28.8C674.68,447.27,678.73,476,677.79,504.3Z" transform="translate(-90.75 -4.29)" fill="#f7b262"/>
+        <path d="M675,525.21c-11.63,57.5-41.19,76.38-41.19,76.38-56.4,42.65-106.91,5-106.91,5-43-26.14-46.49-80.95-46.49-80.95l-5.68-62c14.49,59.38,36.75,93.42,62.69,108.39,31,17.88,65.16,10.3,69.59,9.4C647.65,573.3,667.18,542.11,675,525.21Z" transform="translate(-90.75 -4.29)" fill="#f8c887"/>
+        <path d="M404.23,429.82c-.1,17.1.3,33.35.59,42.67-.5,6.28-1.17,12.27-2,18v0a61,61,0,0,1-5.7,13.1c-17.48,27.86-44.88,22.14-44.88,22.14-66.27-13.76-67-75.93-67-75.93-2.87-21,1.88-36.63,8.57-47.78l.83-.07a211.7,211.7,0,0,0,43.68-11c43.45-16.62,78.08-58.81,78.08-58.81l-9.29,46.26C405,391.16,404.33,411,404.23,429.82Z" transform="translate(-90.75 -4.29)" fill="#225ea0"/>
+        <path d="M402.84,490.49c-10.61,74.93-45.38,101-45.38,101-54.8,48.61-128.87,22.93-128.87,22.93s-63.89-21.67-90.24-71.32C133.05,519,135,501.62,135,501.62,139.62,461,164.85,440,164.85,440c30.23-28.48,119.41-37.14,129-38-6.69,11.15-11.44,26.77-8.57,47.78,0,0,.76,62.17,67,75.93,0,0,27.4,5.72,44.88-22.14A61,61,0,0,0,402.84,490.49Z" transform="translate(-90.75 -4.29)" fill="#599bcd"/>
+        <path d="M403.78,609.62c-24.08,75.21-101.12,69-101.12,69-73.38.68-121.53-57.56-121.53-57.56a156.38,156.38,0,0,1-42.78-78c26.35,49.65,90.24,71.32,90.24,71.32s74.07,25.68,128.87-22.93c0,0,34.77-26.08,45.38-101v0c.8-5.71,1.47-11.7,2-18,.15,5.05.28,8.06.28,8.06l.18,1C421.7,577.32,403.78,609.62,403.78,609.62Z" transform="translate(-90.75 -4.29)" fill="#82b5db"/>
+      </svg>
+    </span>
+    <div class="brandtext">
+      <div class="eyebrow">Connascent · Search Console</div>
+      <h1>GSC Index Monitor</h1>
+      <div class="meta" id="sub">Loading…</div>
+    </div>
+  </div>
+  <div class="hactions">
+    <select id="propSwitch" title="Active Search Console property" style="display:none;max-width:240px"></select>
+    <button id="copyNI">Copy not-indexed</button>
+    <button id="checkSel">Re-check selected</button>
+    <button id="checkAll" class="primary">Re-check all</button>
+  </div>
+</header>
+
+<div id="warnBox"></div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="pages">Pages</div>
+  <div class="tab" data-tab="site">Site &amp; APIs</div>
+  <div class="tab" data-tab="logs">Logs <span class="dot" id="errDot">0</span></div>
+  <div class="tab" data-tab="console">Console <span class="live off" id="liveDot">live</span></div>
+</div>
+
+<!-- PAGES -->
+<div class="view active" id="view-pages">
+  <div class="bar">
+    <div class="counts" id="counts" style="display:flex;gap:8px"></div>
+    <input type="search" id="q" placeholder="Filter URLs…" />
+  </div>
+  <table>
+    <thead><tr>
+      <th style="width:24px"><input type="checkbox" id="selAll" /></th>
+      <th style="width:120px">Status</th>
+      <th style="width:230px">Coverage</th>
+      <th>URL</th>
+      <th style="width:240px">Actions</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<!-- SITE & APIS -->
+<div class="view" id="view-site">
+  <div style="padding:18px 24px;display:grid;gap:18px">
+
+    <section class="card">
+      <div class="cardhead"><b>Properties</b> <span class="ev">sites.list</span>
+        <button id="loadSites">Load</button></div>
+      <div id="sitesBox" class="cardbody cov">Click Load to fetch your Search Console properties.</div>
+    </section>
+
+    <section class="card">
+      <div class="cardhead"><b>Sitemaps</b> <span class="ev">sitemaps.list</span>
+        <button id="loadSitemaps">Load</button></div>
+      <div id="sitemapsBox" class="cardbody cov">Submitted sitemaps + their crawl stats for the active property.</div>
+      <div class="cardbody" style="display:flex;gap:8px;align-items:center;border-top:1px solid var(--line)">
+        <input type="text" id="feedpath" placeholder="https://connascent.com/sitemap.xml"
+          style="flex:1;background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:7px 12px;border-radius:8px" />
+        <button id="submitSitemap">Submit sitemap</button>
+        <span class="ev">sitemaps.submit (write)</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="cardhead"><b>Search performance</b> <span class="ev">searchanalytics.query</span>
+        <select id="perfDim" style="background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:6px;border-radius:7px">
+          <option value="query">Top queries</option>
+          <option value="page">Top pages</option>
+          <option value="country">By country</option>
+          <option value="device">By device</option>
+        </select>
+        <select id="perfDays" style="background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:6px;border-radius:7px">
+          <option value="7">7 days</option><option value="28" selected>28 days</option><option value="90">90 days</option>
+        </select>
+        <button id="loadPerf">Load</button></div>
+      <div id="perfBox" class="cardbody cov">Clicks, impressions, CTR and position for the active property.</div>
+    </section>
+
+  </div>
+</div>
+
+<!-- LOGS -->
+<div class="view" id="view-logs">
+  <div class="bar">
+    <div class="counts" id="logFilters" style="display:flex;gap:8px"></div>
+    <span style="flex:1"></span>
+    <button id="logRefresh">Refresh</button>
+    <button id="logClear">Clear logs</button>
+  </div>
+  <table>
+    <thead><tr>
+      <th style="width:175px">Time</th>
+      <th style="width:70px">Level</th>
+      <th style="width:90px">Event</th>
+      <th>Message</th>
+    </tr></thead>
+    <tbody id="logRows"></tbody>
+  </table>
+</div>
+
+<!-- CONSOLE -->
+<div class="view" id="view-console">
+  <div class="bar">
+    <span class="live off" id="liveDot2">stream</span>
+    <span style="flex:1"></span>
+    <label style="font-size:12px;color:var(--muted)"><input type="checkbox" id="autoscroll" checked /> auto-scroll</label>
+    <button id="conClear">Clear view</button>
+  </div>
+  <pre id="console"></pre>
+</div>
+
+<!-- DETAILS MODAL (per-URL API hub) -->
+<div id="modal" class="modal-bg">
+  <div class="modal">
+    <div class="modal-head">
+      <div><b>URL details</b><div class="ev" id="mUrl" style="word-break:break-all"></div></div>
+      <button id="mClose">✕</button>
+    </div>
+    <div class="modal-acts">
+      <button id="mReindex">Reindex (URL_UPDATED)</button>
+      <button id="mDeleted">Notify removed (URL_DELETED)</button>
+      <button id="mNotifyStatus">Index notify status</button>
+      <button id="mPerf">Performance</button>
+      <a id="mGsc" target="_blank">GSC ↗</a>
+    </div>
+    <div class="modal-body" id="mBody">Loading inspection…</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let DATA = { rows: [], siteUrl: '', sites: [] };
+let filter = 'all';
+let logLevel = 'all';
+const $ = (s) => document.querySelector(s);
+const byUrl = (u) => DATA.rows.find((r) => r.url === u);
+const esc = (s) => (s == null ? '' : String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])));
+
+function toast(msg, kind) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'show ' + (kind || '');
+  clearTimeout(t._t); t._t = setTimeout(() => (t.className = ''), 4200);
+}
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('.tab').forEach((tab) => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+    tab.classList.add('active');
+    $('#view-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'logs') loadLogs();
+    if (tab.dataset.tab === 'console') ensureStream();
+  };
+});
+
+/* ---------------- pages ---------------- */
+function statusOf(r) {
+  if (r.isIndexed === true) return 'indexed';
+  if (r.isIndexed === false) return 'notindexed';
+  return 'unchecked';
+}
+
+function render() {
+  const q = $('#q').value.toLowerCase();
+  const all = DATA.rows;
+  const counts = {
+    all: all.length,
+    indexed: all.filter((r) => statusOf(r) === 'indexed').length,
+    notindexed: all.filter((r) => statusOf(r) === 'notindexed').length,
+    unchecked: all.filter((r) => statusOf(r) === 'unchecked').length,
+  };
+  const labels = { all: 'All', indexed: 'Indexed', notindexed: 'Not indexed', unchecked: 'Not checked' };
+  $('#counts').innerHTML = Object.keys(labels).map((k) =>
+    `<span class="pill ${filter === k ? 'active' : ''}" data-f="${k}">${labels[k]} <b>${counts[k]}</b></span>`).join('');
+  document.querySelectorAll('#counts .pill').forEach((pl) => (pl.onclick = () => { filter = pl.dataset.f; render(); }));
+
+  const rows = all.filter((r) => {
+    if (filter !== 'all' && statusOf(r) !== filter) return false;
+    if (q && !r.url.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  $('#rows').innerHTML = rows.map((r) => {
+    const st = statusOf(r);
+    const badge = st === 'indexed' ? '<span class="badge b-ok">✓ Indexed</span>'
+      : st === 'notindexed' ? '<span class="badge b-no">✗ Not indexed</span>'
+      : '<span class="badge b-un">— Not checked</span>';
+    const path = r.url.replace(/^https?:\/\/[^/]+/, '') || '/';
+    return `<tr data-url="${encodeURIComponent(r.url)}">
+      <td><input type="checkbox" class="rowsel" /></td>
+      <td>${badge}</td>
+      <td class="cov">${esc(r.coverageState || '')}</td>
+      <td class="url"><a href="${r.url}" target="_blank" title="${r.url}">${esc(path)}</a></td>
+      <td><div class="acts">
+        <button class="recheck">Re-check</button>
+        <button class="details">Details</button>
+        <button class="reindex">Reindex</button>
+        ${st === 'notindexed' ? '<button class="copy" title="Copy URL">Copy</button>' : ''}
+        <a href="${r.gscLink}" target="_blank" title="Open in Search Console">GSC ↗</a>
+      </div></td></tr>`;
+  }).join('');
+
+  document.querySelectorAll('#rows tr').forEach((tr) => {
+    const u = decodeURIComponent(tr.dataset.url);
+    tr.querySelector('.recheck').onclick = () => checkUrls([u], tr.querySelector('.recheck'));
+    tr.querySelector('.reindex').onclick = (e) => reindex(u, e.target);
+    tr.querySelector('.details').onclick = () => openDetails(u);
+    const cp = tr.querySelector('.copy');
+    if (cp) cp.onclick = () => copyText(u, `Copied ${u}`);
+  });
+}
+
+async function load() {
+  $('#sub').textContent = 'Connecting to local server…';
+  let r;
+  try {
+    r = await fetch('/api/data', { signal: AbortSignal.timeout(20000) });
+  } catch (e) {
+    const why = e.name === 'TimeoutError' ? 'request timed out (is node server.mjs running?)' : e.message;
+    $('#sub').innerHTML = `<span class="lvl-error">Couldn't reach the server — ${esc(why)}.</span> <a href="#" onclick="location.reload();return false">Reload</a>`;
+    return;
+  }
+  if (!r.ok) {
+    $('#sub').innerHTML = `<span class="lvl-error">Server error ${r.status} on /api/data.</span> <a href="#" onclick="location.reload();return false">Reload</a>`;
+    return;
+  }
+  $('#sub').textContent = 'Loading properties & sitemap…';
+  DATA = await r.json();
+  const upd = DATA.updatedAt ? new Date(DATA.updatedAt).toLocaleString() : 'never';
+  const who = DATA.authMode === 'user' ? 'signed in as' : 'bot';
+  const nProps = (DATA.sites || []).length;
+  $('#sub').innerHTML = `Property <code>${esc(DATA.siteUrl || '—')}</code> · ${who} <code>${esc(DATA.bot)}</code> · ${nProps} propert${nProps === 1 ? 'y' : 'ies'} · last run ${upd}`;
+  setErrDot(DATA.errorCount || 0);
+
+  // header property switcher — shown only when the account has more than one property
+  const ps = $('#propSwitch');
+  if (nProps > 1) {
+    ps.style.display = '';
+    ps.innerHTML = (DATA.sites || [])
+      .map((s) => `<option value="${esc(s)}" ${s === DATA.siteUrl ? 'selected' : ''}>${esc(s)}</option>`)
+      .join('');
+  } else {
+    ps.style.display = 'none';
+  }
+
+  let warn = '';
+  if (!DATA.hasAccess) {
+    if (DATA.authMode === 'user')
+      warn = `⚠️ Signed in as <code>${esc(DATA.bot)}</code> but this account has <b>no</b> Search Console properties. Use the Gmail that owns connascent.com.`;
+    else if (DATA.hasOAuthClient)
+      warn = `👤 OAuth client ready but not logged in. Run <code>node login.mjs</code>, sign in, then reload.`;
+    else
+      warn = `⚠️ No access. Drop an OAuth Desktop-client JSON into gsc-api/ and run <code>node login.mjs</code>.`;
+  }
+  $('#warnBox').innerHTML = warn ? `<div class="warn">${warn}</div>` : '';
+  render();
+}
+
+async function checkUrls(urls, btn) {
+  if (!urls.length) return;
+  const orig = btn && btn.textContent;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin">⟳</span>'; }
+  toast(`Checking ${urls.length} URL${urls.length > 1 ? 's' : ''}… (watch the Console tab)`);
+  try {
+    const res = await fetch('/api/check', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ urls }) });
+    const { results } = await res.json();
+    let err = 0;
+    results.forEach((rr) => { if (rr.error) { err++; return; } Object.assign(byUrl(rr.url), rr); });
+    render();
+    const dr = await (await fetch('/api/data')).json(); setErrDot(dr.errorCount || 0);
+    toast(err ? `Done, ${err} failed (see Logs)` : `Checked ${results.length} URL${results.length > 1 ? 's' : ''}`, err ? 'err' : 'ok');
+  } catch (e) { toast('Check failed: ' + e.message, 'err'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = orig; } }
+}
+
+async function reindex(url, btn) {
+  btn.disabled = true; const o = btn.textContent; btn.innerHTML = '<span class="spin">⟳</span>';
+  try {
+    const res = await fetch('/api/reindex', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }) });
+    const r = await res.json();
+    toast((r.ok ? '✅ Reindex: ' : '❌ ') + r.message, r.ok ? 'ok' : 'err');
+    if (!r.ok) { const dr = await (await fetch('/api/data')).json(); setErrDot(dr.errorCount || 0); }
+  } catch (e) { toast('Reindex failed: ' + e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = o; }
+}
+
+async function copyText(text, msg) {
+  try { await navigator.clipboard.writeText(text); toast(msg, 'ok'); }
+  catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast(msg, 'ok'); }
+}
+
+function selectedUrls() {
+  return [...document.querySelectorAll('#rows tr')].filter((tr) => tr.querySelector('.rowsel').checked).map((tr) => decodeURIComponent(tr.dataset.url));
+}
+
+$('#q').oninput = render;
+$('#selAll').onchange = (e) => document.querySelectorAll('.rowsel').forEach((c) => (c.checked = e.target.checked));
+$('#checkSel').onclick = (e) => { const u = selectedUrls(); if (!u.length) return toast('Select some rows first', 'err'); checkUrls(u, e.target); };
+$('#checkAll').onclick = (e) => checkUrls(DATA.rows.map((r) => r.url), e.target);
+$('#copyNI').onclick = () => {
+  const ni = DATA.rows.filter((r) => statusOf(r) === 'notindexed').map((r) => r.url);
+  if (!ni.length) return toast('No not-indexed URLs to copy', 'err');
+  copyText(ni.join('\n'), `Copied ${ni.length} not-indexed URL${ni.length > 1 ? 's' : ''}`);
+};
+
+/* ---------------- logs ---------------- */
+function setErrDot(n) {
+  const d = $('#errDot'); d.textContent = n; d.classList.toggle('show', n > 0);
+}
+async function loadLogs() {
+  const lv = ['all', 'error', 'warn', 'info', 'debug'];
+  const r = await fetch('/api/logs?level=' + logLevel + '&limit=500');
+  const { logs, errorCount } = await r.json();
+  setErrDot(errorCount || 0);
+  $('#logFilters').innerHTML = lv.map((k) =>
+    `<span class="pill ${logLevel === k ? 'active' : ''}" data-l="${k}">${k}</span>`).join('');
+  document.querySelectorAll('#logFilters .pill').forEach((pl) => (pl.onclick = () => { logLevel = pl.dataset.l; loadLogs(); }));
+  $('#logRows').innerHTML = [...logs].reverse().map((l) =>
+    `<tr>
+      <td class="logtime">${new Date(l.ts).toLocaleString()}</td>
+      <td><span class="lvl lvl-${l.level}">${l.level}</span></td>
+      <td class="ev">${esc(l.event || '')}</td>
+      <td>${esc(l.message)}${l.url ? ` <span class="ev">— ${esc(l.url)}</span>` : ''}</td>
+    </tr>`).join('') || '<tr><td colspan="4" class="cov">No log entries.</td></tr>';
+}
+$('#logRefresh').onclick = loadLogs;
+$('#logClear').onclick = async () => {
+  if (!confirm('Clear all logs?')) return;
+  await fetch('/api/logs/clear', { method: 'POST' });
+  loadLogs();
+};
+
+/* ---------------- console (live SSE) ---------------- */
+const consoleEl = $('#console');
+function appendConsole(l) {
+  const ts = new Date(l.ts).toLocaleTimeString();
+  const line = document.createElement('span');
+  line.className = 'cline c-' + l.level;
+  const tag = l.event ? `<span class="c-tag">[${esc(l.event)}]</span> ` : '';
+  const urlPart = l.url ? ` <span class="c-tag">${esc(l.url)}</span>` : '';
+  line.innerHTML = `<span class="c-ts">${ts}</span> ${tag}${esc(l.message)}${urlPart}`;
+  consoleEl.appendChild(line);
+  while (consoleEl.childNodes.length > 3000) consoleEl.removeChild(consoleEl.firstChild);
+  if ($('#autoscroll').checked) consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+$('#conClear').onclick = () => (consoleEl.innerHTML = '');
+
+function setLive(on) {
+  ['#liveDot', '#liveDot2'].forEach((s) => $(s).classList.toggle('off', !on));
+}
+
+// Lazy: only open the live stream when the Console tab is first viewed, so
+// idle tabs don't hold a connection (browsers cap ~6 per host).
+let _streamStarted = false;
+async function ensureStream() {
+  if (_streamStarted) return;
+  _streamStarted = true;
+  try {
+    const r = await fetch('/api/logs?level=all&limit=200');
+    const { logs } = await r.json();
+    logs.forEach(appendConsole);
+  } catch {}
+  const es = new EventSource('/api/stream');
+  es.onopen = () => setLive(true);
+  es.onerror = () => setLive(false);
+  es.onmessage = (e) => { try { appendConsole(JSON.parse(e.data)); } catch {} };
+}
+
+/* ---------------- details modal (per-URL API hub) ---------------- */
+let modalUrl = null;
+const modal = $('#modal');
+function closeModal() { modal.classList.remove('show'); }
+$('#mClose').onclick = closeModal;
+modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+async function openDetails(u) {
+  modalUrl = u;
+  $('#mUrl').textContent = u;
+  $('#mGsc').href = (byUrl(u) || {}).gscLink || '#';
+  $('#mBody').innerHTML = 'Loading inspection…';
+  modal.classList.add('show');
+  try {
+    const r = await (await fetch('/api/inspect?url=' + encodeURIComponent(u))).json();
+    if (!r.ok) { $('#mBody').innerHTML = `<div class="lvl-error">${esc(r.message)}</div>`; return; }
+    $('#mBody').innerHTML = renderInspection(r.result);
+  } catch (e) { $('#mBody').innerHTML = `<div class="lvl-error">${esc(e.message)}</div>`; }
+}
+
+function kv(obj) {
+  return '<div class="kv">' + Object.entries(obj)
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `<span>${esc(k)}</span><span>${esc(v)}</span>`).join('') + '</div>';
+}
+function vbadge(v) { return `<span class="vbadge v-${esc(v)}">${esc(v || '—')}</span>`; }
+
+function renderInspection(res) {
+  const i = res.indexStatusResult || {};
+  let h = `<div class="sec-title">Index status — verdict ${vbadge(i.verdict)}</div>`;
+  h += kv({
+    Coverage: i.coverageState, 'Robots.txt': i.robotsTxtState, Indexing: i.indexingState,
+    'Page fetch': i.pageFetchState, 'Crawled as': i.crawledAs, 'Last crawl': i.lastCrawlTime,
+    'Google canonical': i.googleCanonical, 'User canonical': i.userCanonical,
+    'Referring URLs': (i.referringUrls || []).length || null,
+    Sitemaps: (i.sitemap || []).join(', ') || null,
+  });
+  if (res.mobileUsabilityResult) {
+    const m = res.mobileUsabilityResult;
+    h += `<div class="sec-title">Mobile usability — ${vbadge(m.verdict)}</div>`;
+    h += (m.issues || []).length
+      ? '<ul>' + m.issues.map((x) => `<li>${esc(x.severity)}: ${esc(x.message)}</li>`).join('') + '</ul>'
+      : '<div class="cov">No issues.</div>';
+  }
+  if (res.richResultsResult) {
+    const rr = res.richResultsResult;
+    h += `<div class="sec-title">Rich results — ${vbadge(rr.verdict)}</div>`;
+    h += (rr.detectedItems || []).length
+      ? '<div class="cov">' + rr.detectedItems.map((d) => esc(d.richResultType) + ' ×' + (d.items || []).length).join(', ') + '</div>'
+      : '<div class="cov">None detected.</div>';
+  }
+  if (res.inspectionResultLink)
+    h += `<div class="sec-title">Open in GSC</div><a href="${res.inspectionResultLink}" target="_blank">${esc(res.inspectionResultLink)}</a>`;
+  return h;
+}
+
+$('#mReindex').onclick = (e) => publishNotify(modalUrl, 'URL_UPDATED', e.target);
+$('#mDeleted').onclick = (e) => { if (confirm('Tell Google this URL was REMOVED?')) publishNotify(modalUrl, 'URL_DELETED', e.target); };
+async function publishNotify(u, type, btn) {
+  btn.disabled = true; const o = btn.textContent; btn.innerHTML = '<span class="spin">⟳</span>';
+  try {
+    const r = await (await fetch('/api/reindex', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url: u, type }) })).json();
+    toast((r.ok ? '✅ ' : '❌ ') + r.message, r.ok ? 'ok' : 'err');
+  } catch (e) { toast(e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = o; }
+}
+$('#mNotifyStatus').onclick = async () => {
+  $('#mBody').innerHTML = 'Fetching notify metadata…';
+  const r = await (await fetch('/api/index-status?url=' + encodeURIComponent(modalUrl))).json();
+  if (!r.ok) { $('#mBody').innerHTML = `<div class="lvl-error">${esc(r.message)}</div>`; return; }
+  $('#mBody').innerHTML = `<div class="sec-title">Indexing API — last notifications</div><pre style="white-space:pre-wrap;font-size:12px">${esc(JSON.stringify(r.data, null, 2))}</pre>`;
+};
+$('#mPerf').onclick = async () => {
+  $('#mBody').innerHTML = 'Loading performance…';
+  const r = await (await fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url: modalUrl, days: 28, dimensions: ['date'] }) })).json();
+  if (!r.ok) { $('#mBody').innerHTML = `<div class="lvl-error">${esc(r.message)}</div>`; return; }
+  const tot = r.rows.reduce((a, x) => ({ c: a.c + x.clicks, i: a.i + x.impressions }), { c: 0, i: 0 });
+  $('#mBody').innerHTML = `<div class="sec-title">Search performance (28 days)</div>` +
+    kv({ Clicks: tot.c, Impressions: tot.i, 'Days with data': r.rows.length }) +
+    (r.rows.length ? '' : '<div class="cov">No impressions in this window.</div>');
+};
+
+/* ---------------- site & APIs tab ---------------- */
+$('#loadSites').onclick = async () => {
+  $('#sitesBox').textContent = 'Loading…';
+  const { sites, active } = await (await fetch('/api/sites')).json();
+  $('#sitesBox').innerHTML = `<table class="dtable"><thead><tr><th></th><th>Property</th><th>Permission</th></tr></thead><tbody>` +
+    sites.map((s) => `<tr>
+      <td><input type="radio" name="prop" ${s.siteUrl === active ? 'checked' : ''} onclick="switchSite('${s.siteUrl.replace(/'/g, "\\'")}')"></td>
+      <td>${esc(s.siteUrl)}</td><td class="cov">${esc(s.permissionLevel)}</td></tr>`).join('') +
+    `</tbody></table><div class="cov" style="margin-top:8px">Selecting a property switches which one all checks use.</div>`;
+};
+window.switchSite = async (siteUrl) => {
+  const r = await (await fetch('/api/site', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ siteUrl }) })).json();
+  if (r.ok) { toast('Active property → ' + siteUrl, 'ok'); load(); }
+};
+// Header dropdown switches the active property from anywhere.
+$('#propSwitch').onchange = (e) => switchSite(e.target.value);
+
+$('#loadSitemaps').onclick = async () => {
+  $('#sitemapsBox').textContent = 'Loading…';
+  const r = await (await fetch('/api/sitemaps')).json();
+  if (!r.ok) { $('#sitemapsBox').innerHTML = `<span class="lvl-error">${esc(r.message)}</span>`; return; }
+  if (!r.sitemaps.length) { $('#sitemapsBox').textContent = 'No sitemaps submitted for this property.'; return; }
+  $('#sitemapsBox').innerHTML = `<table class="dtable"><thead><tr><th>Path</th><th>Last downloaded</th><th class="num">Errors</th><th class="num">Warnings</th><th>Pending</th></tr></thead><tbody>` +
+    r.sitemaps.map((s) => `<tr><td class="url"><a href="${s.path}" target="_blank">${esc(s.path)}</a></td>
+      <td class="cov">${esc(s.lastDownloaded || '—')}</td>
+      <td class="num ${s.errors ? 'lvl-error' : ''}">${s.errors}</td>
+      <td class="num ${s.warnings ? 'lvl-warn' : ''}">${s.warnings}</td>
+      <td>${s.isPending ? 'yes' : 'no'}</td></tr>`).join('') + `</tbody></table>`;
+};
+$('#submitSitemap').onclick = async (e) => {
+  const feedpath = $('#feedpath').value.trim();
+  if (!feedpath) return toast('Enter a sitemap URL', 'err');
+  e.target.disabled = true; const o = e.target.textContent; e.target.innerHTML = '<span class="spin">⟳</span>';
+  const r = await (await fetch('/api/sitemaps/submit', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ feedpath }) })).json();
+  toast((r.ok ? '✅ ' : '❌ ') + r.message, r.ok ? 'ok' : 'err');
+  e.target.disabled = false; e.target.textContent = o;
+  if (r.ok) $('#loadSitemaps').click();
+};
+
+$('#loadPerf').onclick = async () => {
+  $('#perfBox').textContent = 'Loading…';
+  const dim = $('#perfDim').value, days = Number($('#perfDays').value);
+  const r = await (await fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ days, dimensions: [dim] }) })).json();
+  if (!r.ok) { $('#perfBox').innerHTML = `<span class="lvl-error">${esc(r.message)}</span>`; return; }
+  if (!r.rows.length) { $('#perfBox').textContent = 'No data in this window.'; return; }
+  $('#perfBox').innerHTML = `<table class="dtable"><thead><tr><th>${esc(dim)}</th><th class="num">Clicks</th><th class="num">Impr.</th><th class="num">CTR</th><th class="num">Pos.</th></tr></thead><tbody>` +
+    r.rows.map((x) => `<tr><td>${esc(x.keys[0])}</td>
+      <td class="num">${x.clicks}</td><td class="num">${x.impressions}</td>
+      <td class="num">${(x.ctr * 100).toFixed(1)}%</td><td class="num">${x.position.toFixed(1)}</td></tr>`).join('') + `</tbody></table>`;
+};
+
+load(); // the live stream starts only when you open the Console tab
+</script>
+</body>
+</html>

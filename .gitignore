@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# --- Secrets & credentials — NEVER commit these ---------------------------
+# Catch-all: ignore every JSON, then re-allow only the safe project files.
+*.json
+!package.json
+!package-lock.json
+# Belt-and-suspenders (in case the allowlist above is ever edited):
+token.json
+client_secret*.json
+*.iam.gserviceaccount.com.json
+
+# --- Environment ----------------------------------------------------------
+.env
+.env.local
+.env.*.local
+
+# --- Local data & generated output ----------------------------------------
+gsc.db
+gsc.db-wal
+gsc.db-shm
+results.json
+not-indexed.txt
+sitemap.xml
+
+# --- OS / editor ----------------------------------------------------------
+.DS_Store
+Thumbs.db
